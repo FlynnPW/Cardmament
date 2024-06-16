@@ -1,0 +1,389 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.Drawing;
+using UnityEngine;
+using static UnityEngine.RuleTile.TilingRuleOutput;
+
+public class TileManager : MonoBehaviour
+{
+    private Vector2Int mapSize;
+    private TileOnBoard[,] mapTiles;
+    private enum tilePassableStatus { passable, unitBlocked, tileBlocked }
+    private tilePassableStatus[,] tilesPassableStatus;
+    private delegate void tileSetTo(Vector2Int tile, Tile to);
+    private tileSetTo tileSetToCallback;
+    private Vector2Int[] neighbours = new Vector2Int[] { new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(1, 0), new Vector2Int(0, -1) };
+    [SerializeField]
+    private Tile mountainTile;
+    [SerializeField]
+    private Tile waterTile;
+    [SerializeField]
+    private Tile grassTile;
+    [SerializeField]
+    private GameObject tilePrefab;
+    [SerializeField]
+    private Camera mainCamera;
+    private int seed;
+    private bool mapBuilt = false;
+    //RANDOM GENERATION VALUES
+    const int MAX_RIVERS = 2;
+    const int MIN_RIVERS = 0;
+    const int MAX_MOUNTAINS = 3;
+    const int MIN_MOUNTAINS = 1;
+    const int MAX_MAP_SIZE = 15;
+    const int MIN_MAP_SIZE = 10;
+    const int MAX_SEED = 999; 
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        seed = Random.Range(0, MAX_SEED);
+        Debug.Log("Seed is: " + seed);
+        generateMap(seed);
+        buildMap();
+        mainCamera.transform.position =  new Vector3((mapSize.x -0.5f) / 2, (mapSize.y - 0.5f) / 2, -10);
+    }
+
+    void generateMap(int generateFromSeed)
+    {
+        Random.InitState(generateFromSeed);
+
+        int size = Random.Range(MIN_MAP_SIZE, MAX_MAP_SIZE);
+        mapSize = new Vector2Int(size, size);
+        mapTiles = new TileOnBoard[size, size];
+        tilesPassableStatus = new tilePassableStatus[size, size];
+        List<Vector2Int> emptyTiles = new List<Vector2Int>();
+
+        for (int x = 0; x < mapSize.x; x++)
+        {
+            for (int y = 0; y < mapSize.y; y++)
+            {
+                emptyTiles.Add(new Vector2Int(x, y));
+            }
+        }
+
+        Vector2Int getRandomClearTile()
+        {
+            int randomClearTileIndex = Random.Range(0, emptyTiles.Count - 1);
+            Vector2Int tile = emptyTiles[randomClearTileIndex];
+            emptyTiles.RemoveAt(randomClearTileIndex);
+            return tile;
+        }
+
+        void tileSetTo(Vector2Int position, Tile to)
+        {
+            if (to != null && emptyTiles.Contains(position))
+            {
+                emptyTiles.Remove(position);
+            }
+        }
+
+        tileSetToCallback += tileSetTo;
+
+        void createRivers()
+        {
+            int rivers = Random.Range(MIN_RIVERS, MAX_RIVERS + 1);
+
+            for (int i = 0; i < rivers; i++)
+            {
+                int spawnRiverAtEdge = Random.Range(0, 3);
+
+                Vector2Int getRandomStartingTile(int edge)
+                {
+                    int spawnRiverAtTile = Random.Range(0, mapSize.x - 1);
+                    Vector2Int riverTile;
+                    //left=0,bottom=1,right=2,top=3
+
+                    switch (edge)
+                    {
+                        case 0:
+                            riverTile = new Vector2Int(0, spawnRiverAtTile + 1);
+                            break;
+                        case 1:
+                            riverTile = new Vector2Int(spawnRiverAtTile, 0);
+                            break;
+                        case 2:
+                            riverTile = new Vector2Int(mapSize.x - 1, spawnRiverAtTile);
+                            break;
+                        case 3:
+                            riverTile = new Vector2Int(spawnRiverAtTile + 1, mapSize.y - 1);
+                            break;
+                        default:
+                            Debug.LogError("River edge not assigned");
+                            riverTile = new Vector2Int();
+                            break;
+                    }
+
+                    print("River started at: " + riverTile);
+
+                    bool leftRightSide = riverTile.x == 0 || riverTile.x == mapSize.x - 1;
+                    bool topBottomSide = riverTile.y == 0 || riverTile.y == mapSize.y - 1;
+
+                    if (isTileOfType(riverTile, waterTile) || neighbouringWaterTile(riverTile, topBottomSide, leftRightSide))
+                    {
+                        return getRandomStartingTile(edge);
+                    }
+
+                    return riverTile;
+                }
+
+                Vector2Int riverTile = getRandomStartingTile(spawnRiverAtEdge);
+                setTileTo(riverTile, waterTile);
+
+                bool riverContinue = true;
+                int riverLength = 1;
+
+                bool closerToEdge(Vector2Int neighbour, Vector2Int tile, int edge)
+                {
+                    switch (spawnRiverAtEdge)
+                    {
+                        case 0:
+                            return neighbour.x < tile.x;
+                        case 1:
+                            return neighbour.y < tile.y;
+                        case 2:
+                            return neighbour.x > tile.x;
+                        case 3:
+                            return neighbour.y > tile.y;
+                        default:
+                            Debug.LogError("River edge not assigned");
+                            return false;
+                    }
+                }
+
+                bool atOppositeEdge(Vector2Int tile, int edge)
+                {
+                    switch (spawnRiverAtEdge)
+                    {
+                        case 0:
+                            return tile.x == mapSize.x - 1;
+                        case 1:
+                            return tile.y == mapSize.y - 1;
+                        case 2:
+                            return tile.x == 0;
+                        case 3:
+                            return tile.y == 0;
+                        default:
+                            Debug.LogError("River edge not assigned");
+                            return false;
+                    }
+                }
+
+                while (riverContinue)
+                {
+                    List<Vector2Int> neighbours = getNeighbouringTiles(riverTile);
+                    neighbours.RemoveAll(neighbour =>
+                    neighbouringWaterTile(neighbour, neighbour.y != riverTile.y, neighbour.x != riverTile.x) || isTileOfType(neighbour, waterTile) || closerToEdge(neighbour, riverTile, spawnRiverAtEdge));
+
+                    if (neighbours.Count == 0)
+                    {
+                        riverContinue = false;
+                        print("river stopped due to no vaiable expansions at " + riverTile);
+                        continue;
+                    }
+
+                    int randomNeighbourIndex = Random.Range(0, neighbours.Count);
+                    Vector2Int chosenNeighbour = neighbours[randomNeighbourIndex];
+                    riverTile = chosenNeighbour;
+                    setTileTo(riverTile, waterTile);
+                    riverLength++;
+
+                    if (atOppositeEdge(riverTile, spawnRiverAtEdge))
+                    {
+                        print("river stopped as we've reached the other side at " + riverTile);
+                        riverContinue = false;
+                    }
+                }
+            }
+        }
+
+        void createMountains()
+        {
+            int mountains = Random.Range(MIN_MOUNTAINS, MAX_MOUNTAINS);
+
+            for (int i = 0; i < mountains; i++)
+            {
+                Vector2Int mountainPosition = getRandomClearTile();
+                setTileTo(mountainPosition, mountainTile);
+                List<Vector2Int> neighbours = getNeighbouringTiles(mountainPosition);
+
+                foreach (Vector2Int potentialExpansion in neighbours)
+                {
+                    if (isTileOfType(potentialExpansion, null))
+                    {
+                        if (Random.Range(0, 2) == 1)
+                        {
+                            setTileTo(potentialExpansion, mountainTile);
+                        }
+                    }
+                }
+            }
+        }
+
+        void fillInGrass()
+        {
+            while (emptyTiles.Count > 0)
+            {
+                Vector2Int emptyTile = emptyTiles[0];
+                setTileTo(emptyTile, grassTile);
+            }
+        }
+
+        createRivers();
+        createMountains();
+        fillInGrass();
+        tileSetToCallback -= tileSetTo;
+        UnitManager.instance.mapSet(mapSize);
+    }
+
+    private void buildMap()
+    {
+        for (int x = 0; x < mapSize.x; x++)
+        {
+            for (int y = 0; y < mapSize.y; y++)
+            {
+                GameObject newTile = Instantiate(tilePrefab, new Vector2(x, y), Quaternion.identity);
+                SpriteRenderer spriteRenderer = newTile.GetComponent<SpriteRenderer>();
+                
+                //temp
+                if (mapTiles[x, y] == null)
+                {
+                    continue;
+                }
+
+                spriteRenderer.color = mapTiles[x, y].getTile().getTileColour();
+            }
+        }
+
+        mapBuilt = true;
+    }
+
+    private bool neighbouringWaterTile(Vector2Int at, bool horizontal, bool vertical)
+    {
+        if (horizontal) //are we above or below?
+        {
+            return isTileOfType(new Vector2Int(at.x - 1, at.y), waterTile) || isTileOfType(new Vector2Int(at.x + 1, at.y), waterTile); //horizontal to another water tile?
+        }
+        else if (vertical)
+        {
+            return isTileOfType(new Vector2Int(at.x, at.y + 1), waterTile) || isTileOfType(new Vector2Int(at.x, at.y + 1), waterTile); //vertical to another water tile?
+        }
+
+        return false;
+    }
+
+    private void setTileTo(Vector2Int positionToSet, Tile to)
+    {
+        mapTiles[positionToSet.x, positionToSet.y] = new TileOnBoard(to);
+        tilesPassableStatus[positionToSet.x, positionToSet.y] = to.isTilePassable() ? tilePassableStatus.passable : tilePassableStatus.tileBlocked;
+        if (tileSetToCallback != null) { tileSetToCallback(positionToSet, to); }
+    }
+
+    private List<Vector2Int> getNeighbouringTiles(Vector2Int from)
+    {
+        List<Vector2Int> neighboursToReturn = new List<Vector2Int>();
+
+        foreach (Vector2Int neighbour in neighbours)
+        {
+            Vector2Int neighbourPos = from + neighbour;
+
+            if (isTileWithinBounds(neighbourPos))
+            {
+                neighboursToReturn.Add(neighbourPos);
+            }
+        }
+
+        return neighboursToReturn;
+    }
+
+    private bool isTileOfType(Vector2Int positionOfTile, Tile typeCheck)
+    {
+        if (isTileWithinBounds(positionOfTile) == false)
+        {
+            return false;
+        }
+
+        if (mapTiles[positionOfTile.x, positionOfTile.y] == null)
+        {
+            return typeCheck == null;
+        }
+
+        return mapTiles[positionOfTile.x, positionOfTile.y].getTile() == typeCheck;
+    }
+
+    public bool isTileWithinBounds(Vector2Int toCheck)
+    {
+        return (toCheck.x < 0 || toCheck.x > mapSize.x - 1 || toCheck.y < 0 || toCheck.y > mapSize.y - 1) == false;
+    }
+
+    public TileOnBoard[] getPathTo(Vector2Int from, UnitManager.direction inDirection, int by)
+    {
+        if (isTileWithinBounds(from + getDirectionVector(inDirection) * by) == false)
+        {
+            return null;
+        }
+
+        Vector2Int at = from;
+        TileOnBoard[] tilesInPath = new TileOnBoard[by];
+
+        for (int i = 0; i < by; i++)
+        {
+            at += getDirectionVector(inDirection);
+            
+            if (isTileCurrentlyPassable(at))
+            {
+                tilesInPath[i] = mapTiles[at.x, at.y];
+            }
+            else
+            {
+                return null; 
+            }
+        }
+
+        return tilesInPath;
+    }
+
+    public TileOnBoard getTile(Vector2Int at)
+    {
+        return mapTiles[at.x, at.y];
+    }
+
+    //this checks if the tile is specifically passable now (no unit AND is a passable tile)
+    public bool isTileCurrentlyPassable(Vector2Int tile)
+    {
+        if (isTileWithinBounds(tile) == false)
+        {
+            return false;
+        }
+
+        return tilesPassableStatus[tile.x, tile.y] == tilePassableStatus.passable;
+    }
+
+    public void unitEnteredTile(Vector2Int tile)
+    {
+        tilesPassableStatus[tile.x, tile.y] = tilePassableStatus.unitBlocked;
+    }
+
+    public void unitLeftTile(Vector2Int tile)
+    {
+        tilesPassableStatus[tile.x, tile.y] = tilePassableStatus.passable;
+    }
+
+    public Vector2Int getDirectionVector(UnitManager.direction inDirection)
+    {
+        switch (inDirection)
+        {
+            case UnitManager.direction.down:
+                return new Vector2Int(0, -1);
+            case UnitManager.direction.left:
+                return new Vector2Int(-1, 0);
+            case UnitManager.direction.right:
+                return new Vector2Int(1, 0);
+            case UnitManager.direction.up:
+                return new Vector2Int(0, 1);
+            default:
+                Debug.LogError("How?");
+                return new Vector2Int(0, 0);
+        }
+    }
+}
