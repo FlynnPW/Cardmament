@@ -33,7 +33,7 @@ public class UnitManager : MonoBehaviour
         {
             for (int distance = 1; distance <= maxBy; distance++)
             {
-                Vector2Int potentialPosition = position + tileManager.getDirectionVector(moveInDirection) * distance;
+                Vector2Int potentialPosition = position + TileManager.getDirectionVector(moveInDirection) * distance;
 
                 if (tileManager.isTileCurrentlyPassable(potentialPosition))
                 {
@@ -66,7 +66,7 @@ public class UnitManager : MonoBehaviour
     public bool moveUnitBy(UnitWorld unitToMove, direction inDirection, int by)
     {
         Vector2Int unitPosition = unitToMove.getGridPosition();
-        Vector2Int unitMoveTo = unitPosition + tileManager.getDirectionVector(inDirection) * by;
+        Vector2Int unitMoveTo = unitPosition + TileManager.getDirectionVector(inDirection) * by;
         TileOnBoard[] tilesOnPath = tileManager.getPathTo(unitPosition, inDirection, by);
 
         if (tilesOnPath == null)

@@ -8,16 +8,9 @@ public class Tile
 {
     [SerializeField]
     private bool passable;
-    [SerializeField]
-    private Color tileColour;
 
     public bool isTilePassable()
     {
         return passable;
-    }
-
-    public Color getTileColour()
-    {
-        return tileColour;
     }
 }

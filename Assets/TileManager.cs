@@ -24,7 +24,7 @@ public class TileManager : MonoBehaviour
     [SerializeField]
     private Camera mainCamera;
     private int seed;
-    private bool mapBuilt = false;
+    private BoardDisplayManager boardDisplayManager;
     //RANDOM GENERATION VALUES
     const int MAX_RIVERS = 2;
     const int MIN_RIVERS = 0;
@@ -37,10 +37,10 @@ public class TileManager : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        boardDisplayManager = GetComponent<BoardDisplayManager>();
         seed = Random.Range(0, MAX_SEED);
         Debug.Log("Seed is: " + seed);
         generateMap(seed);
-        buildMap();
         mainCamera.transform.position =  new Vector3((mapSize.x -0.5f) / 2, (mapSize.y - 0.5f) / 2, -10);
     }
 
@@ -53,6 +53,8 @@ public class TileManager : MonoBehaviour
         mapTiles = new TileOnBoard[size, size];
         tilesPassableStatus = new tilePassableStatus[size, size];
         List<Vector2Int> emptyTiles = new List<Vector2Int>();
+        List<Vector2Int>[] allRiversCoordinates;
+        List<Vector2Int>[] allMountainsCoordiantes;
 
         for (int x = 0; x < mapSize.x; x++)
         {
@@ -83,9 +85,11 @@ public class TileManager : MonoBehaviour
         void createRivers()
         {
             int rivers = Random.Range(MIN_RIVERS, MAX_RIVERS + 1);
+            allRiversCoordinates = new List<Vector2Int>[rivers];
 
             for (int i = 0; i < rivers; i++)
             {
+                List<Vector2Int> riverCoordinates = new List<Vector2Int>();
                 int spawnRiverAtEdge = Random.Range(0, 3);
 
                 Vector2Int getRandomStartingTile(int edge)
@@ -114,8 +118,6 @@ public class TileManager : MonoBehaviour
                             break;
                     }
 
-                    print("River started at: " + riverTile);
-
                     bool leftRightSide = riverTile.x == 0 || riverTile.x == mapSize.x - 1;
                     bool topBottomSide = riverTile.y == 0 || riverTile.y == mapSize.y - 1;
 
@@ -124,11 +126,19 @@ public class TileManager : MonoBehaviour
                         return getRandomStartingTile(edge);
                     }
 
+                    print("River started at: " + riverTile);
+
                     return riverTile;
                 }
 
+                void addRiverTile(Vector2Int at)
+                {
+                    setTileTo(at, waterTile);
+                    riverCoordinates.Add(at);
+                }
+
                 Vector2Int riverTile = getRandomStartingTile(spawnRiverAtEdge);
-                setTileTo(riverTile, waterTile);
+                addRiverTile(riverTile);
 
                 bool riverContinue = true;
                 int riverLength = 1;
@@ -185,7 +195,7 @@ public class TileManager : MonoBehaviour
                     int randomNeighbourIndex = Random.Range(0, neighbours.Count);
                     Vector2Int chosenNeighbour = neighbours[randomNeighbourIndex];
                     riverTile = chosenNeighbour;
-                    setTileTo(riverTile, waterTile);
+                    addRiverTile(riverTile);
                     riverLength++;
 
                     if (atOppositeEdge(riverTile, spawnRiverAtEdge))
@@ -194,17 +204,28 @@ public class TileManager : MonoBehaviour
                         riverContinue = false;
                     }
                 }
-            }
+
+                allRiversCoordinates[i] = riverCoordinates;
+            }      
         }
 
         void createMountains()
         {
             int mountains = Random.Range(MIN_MOUNTAINS, MAX_MOUNTAINS);
+            allMountainsCoordiantes = new List<Vector2Int>[mountains];
 
             for (int i = 0; i < mountains; i++)
             {
+                List<Vector2Int> mountainCoordinates = new List<Vector2Int>();
                 Vector2Int mountainPosition = getRandomClearTile();
-                setTileTo(mountainPosition, mountainTile);
+
+                void addMountainTile(Vector2Int at)
+                {
+                    setTileTo(at, mountainTile);
+                    mountainCoordinates.Add(at);
+                }
+
+                addMountainTile(mountainPosition);
                 List<Vector2Int> neighbours = getNeighbouringTiles(mountainPosition);
 
                 foreach (Vector2Int potentialExpansion in neighbours)
@@ -213,11 +234,18 @@ public class TileManager : MonoBehaviour
                     {
                         if (Random.Range(0, 2) == 1)
                         {
-                            setTileTo(potentialExpansion, mountainTile);
+                            addMountainTile(potentialExpansion);
                         }
                     }
                 }
+
+                allMountainsCoordiantes[i] = mountainCoordinates;
             }
+        }
+
+        void createCapturePoints()
+        {
+
         }
 
         void fillInGrass()
@@ -234,28 +262,7 @@ public class TileManager : MonoBehaviour
         fillInGrass();
         tileSetToCallback -= tileSetTo;
         UnitManager.instance.mapSet(mapSize);
-    }
-
-    private void buildMap()
-    {
-        for (int x = 0; x < mapSize.x; x++)
-        {
-            for (int y = 0; y < mapSize.y; y++)
-            {
-                GameObject newTile = Instantiate(tilePrefab, new Vector2(x, y), Quaternion.identity);
-                SpriteRenderer spriteRenderer = newTile.GetComponent<SpriteRenderer>();
-                
-                //temp
-                if (mapTiles[x, y] == null)
-                {
-                    continue;
-                }
-
-                spriteRenderer.color = mapTiles[x, y].getTile().getTileColour();
-            }
-        }
-
-        mapBuilt = true;
+        boardDisplayManager.renderMap(allRiversCoordinates, allMountainsCoordiantes, mapSize);
     }
 
     private bool neighbouringWaterTile(Vector2Int at, bool horizontal, bool vertical)
@@ -369,7 +376,7 @@ public class TileManager : MonoBehaviour
         tilesPassableStatus[tile.x, tile.y] = tilePassableStatus.passable;
     }
 
-    public Vector2Int getDirectionVector(UnitManager.direction inDirection)
+    public static Vector2Int getDirectionVector(UnitManager.direction inDirection)
     {
         switch (inDirection)
         {
@@ -384,6 +391,31 @@ public class TileManager : MonoBehaviour
             default:
                 Debug.LogError("How?");
                 return new Vector2Int(0, 0);
+        }
+    }
+
+    public static UnitManager.direction getVectorDirection(Vector2 vector)
+    {
+        if (vector == Vector2.up)
+        {
+            return UnitManager.direction.up;
+        }
+        else if (vector == Vector2.down)
+        {
+            return UnitManager.direction.down;
+        }
+        else if (vector == Vector2.right)
+        {
+            return UnitManager.direction.right;
+        }
+        else if (vector == Vector2.left)
+        {
+            return UnitManager.direction.left;
+        }
+        else
+        {
+            Debug.LogError("No direction associated with vector: " + vector);
+            return UnitManager.direction.up;
         }
     }
 }
