@@ -7,19 +7,16 @@ public class MainMenuUiManager : MonoBehaviour
 {
     [SerializeField]
     private Button startButton;
-    private PlayersManager playersManager;
-    private CardUiManager cardUiManager;
+    private GameManager gameManager;
 
     private void Start()
     {
-        playersManager = GetComponent<PlayersManager>();
-        cardUiManager = GetComponent<CardUiManager>();
+        gameManager = GetComponent<GameManager>();
     }
 
     public void startGame()
     {
-        cardUiManager.onGameBegan();
-        playersManager.onGameBegan();
         startButton.gameObject.SetActive(false);
+        gameManager.startGame();
     }
 }

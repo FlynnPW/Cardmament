@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,11 +11,29 @@ public class PlayersManager : MonoBehaviour
     private Player currentPlayer = null;
     private Player[] players;
     private CardManager cardManager;
+    public enum playerType { human, cpu }
 
     private void Start()
     {
         cardManager = GetComponent<CardManager>();
-        players = new Player[] { new HumanPlayer(cardManager.getDeck()) };
+    }
+
+    public void setupPlayers(playerType[] playersToSetup)
+    {
+        players = new Player[playersToSetup.Length];
+        
+        for (int i = 0; i < players.Length; i++)
+        {
+            switch (playersToSetup[i])
+            {
+                case playerType.human:
+                    players[i] = new HumanPlayer(cardManager.getDeck());
+                    break;
+                case playerType.cpu:
+                    break;
+            }
+            
+        }
     }
 
     public void onGameBegan()
@@ -25,6 +44,11 @@ public class PlayersManager : MonoBehaviour
     public Player getCurrentPlayer()
     {
         return currentPlayer;
+    }
+
+    public Player[] getAllPlayers()
+    {
+        return players;
     }
 
     public void beginTurnOfNextPlayerIndex()

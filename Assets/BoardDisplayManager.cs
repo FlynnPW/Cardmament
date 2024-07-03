@@ -6,6 +6,8 @@ using UnityEngine.Rendering;
 public class BoardDisplayManager : MonoBehaviour
 {
     [SerializeField]
+    private GameObject manaCapturePointPrefab;
+    [SerializeField]
     private GameObject meshPrefab;
     [SerializeField]
     private GameObject boardParent;
@@ -15,6 +17,8 @@ public class BoardDisplayManager : MonoBehaviour
     private Material mountainMaterial;
     [SerializeField]
     private Material groundMaterial;
+    [SerializeField]
+    private Camera mainCamera;
     const float RIVER_MINIMUM_WIDTH = 0.2f; //from the middle so actual width will be * 2
     const float RIVER_MAXIMUM_WIDTH = 0.4f;
     const int AMOUNT_OF_MOUNTAINS_PER_TILE_MAX = 3;
@@ -26,7 +30,7 @@ public class BoardDisplayManager : MonoBehaviour
     const int RIVER_LAYER = 1;
     const int MOUNTAIN_LAYER = 2;
 
-    public void renderMap(List<Vector2Int>[] riversCoordinates, List<Vector2Int>[] mountainCoordinates, Vector2Int mapSize)
+    public void renderMap(List<Vector2Int>[] riversCoordinates, List<Vector2Int>[] mountainCoordinates, TileCapturePoint[] capturePoints, Vector2Int mapSize)
     {
         foreach (List<Vector2Int> river in riversCoordinates)
         {
@@ -39,6 +43,24 @@ public class BoardDisplayManager : MonoBehaviour
         }
 
         createGround(mapSize);
+
+        foreach (TileCapturePoint capturePoint in capturePoints)
+        {
+            createManaCapturePoint(capturePoint);
+        }
+
+        mainCamera.transform.position = new Vector3((mapSize.x - 0.5f) / 2, (mapSize.y - 0.5f) / 2, -10);
+    }
+
+    void createManaCapturePoint(TileCapturePoint capturePoint)
+    {
+        switch (capturePoint.getCapturePointType())
+        {
+            case TileCapturePoint.capturePointType.ManaCapturePoint:
+                CapturePointWorld capturePointWorld = Instantiate(manaCapturePointPrefab, boardParent.transform).GetComponent<CapturePointWorld>();
+                capturePointWorld.transform.position = (Vector2)capturePoint.getPosition();
+                break;
+        }
     }
 
     void createGround(Vector2Int mapSize)

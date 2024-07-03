@@ -1,13 +1,14 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
 using UnityEngine;
-using static UnityEngine.RuleTile.TilingRuleOutput;
+using Random = UnityEngine.Random;
 
 public class TileManager : MonoBehaviour
 {
     private Vector2Int mapSize;
     private TileOnBoard[,] mapTiles;
+    private Player[,] playerHomeZone;
     private enum tilePassableStatus { passable, unitBlocked, tileBlocked }
     private tilePassableStatus[,] tilesPassableStatus;
     private delegate void tileSetTo(Vector2Int tile, Tile to);
@@ -21,40 +22,39 @@ public class TileManager : MonoBehaviour
     private Tile grassTile;
     [SerializeField]
     private GameObject tilePrefab;
-    [SerializeField]
-    private Camera mainCamera;
-    private int seed;
     private BoardDisplayManager boardDisplayManager;
+    private PlayersManager playersManagers;
     //RANDOM GENERATION VALUES
     const int MAX_RIVERS = 2;
     const int MIN_RIVERS = 0;
     const int MAX_MOUNTAINS = 3;
     const int MIN_MOUNTAINS = 1;
-    const int MAX_MAP_SIZE = 15;
-    const int MIN_MAP_SIZE = 10;
-    const int MAX_SEED = 999; 
+    const int MAX_MAP_SIZE = 12;
+    const int MIN_MAP_SIZE = 12;
+    const int AMOUNT_OF_MANA_CAPTURE_POINTS = 4;
+    const int CAPTURE_POINT_BLOCKING_DISTANCE = 1; //both ways so 1 distance = [blocked] [mana point] [blocked]
 
-    // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
         boardDisplayManager = GetComponent<BoardDisplayManager>();
-        seed = Random.Range(0, MAX_SEED);
-        Debug.Log("Seed is: " + seed);
-        generateMap(seed);
-        mainCamera.transform.position =  new Vector3((mapSize.x -0.5f) / 2, (mapSize.y - 0.5f) / 2, -10);
+        playersManagers = GetComponent<PlayersManager>();
     }
 
-    void generateMap(int generateFromSeed)
+    public void generateMap(int generateFromSeed)
     {
+        Player[] playersOnMap = playersManagers.getAllPlayers();
+
         Random.InitState(generateFromSeed);
 
         int size = Random.Range(MIN_MAP_SIZE, MAX_MAP_SIZE);
         mapSize = new Vector2Int(size, size);
         mapTiles = new TileOnBoard[size, size];
         tilesPassableStatus = new tilePassableStatus[size, size];
+        playerHomeZone = new Player[size, size];
         List<Vector2Int> emptyTiles = new List<Vector2Int>();
         List<Vector2Int>[] allRiversCoordinates;
         List<Vector2Int>[] allMountainsCoordiantes;
+        TileCapturePoint[] allCapturePoints = null;
 
         for (int x = 0; x < mapSize.x; x++)
         {
@@ -81,6 +81,75 @@ public class TileManager : MonoBehaviour
         }
 
         tileSetToCallback += tileSetTo;
+
+        void createHomeZones()
+        {
+            if (playersOnMap.Length != 2)
+            {
+                Debug.LogError("Homezones function only compatible with 2 players.");
+            }
+
+            for (int x = 0; x < mapSize.x; x++)
+            {
+                playerHomeZone[x, 0] = playersOnMap[0];
+                playerHomeZone[x, mapSize.y - 1] = playersOnMap[1];
+                setTileTo(new Vector2Int(x, 0), grassTile);
+                setTileTo(new Vector2Int(x, mapSize.y - 1), grassTile);
+            }
+        }
+
+        void createCapturePoints()
+        {
+            List<int> potentialXCoordinatesForCapturePoints = new List<int>();
+            List<int> potentialYCoordinatesForCapturePoints = new List<int>();
+            allCapturePoints = new TileCapturePoint[AMOUNT_OF_MANA_CAPTURE_POINTS];
+
+            for (int x = 0; x < mapSize.x; x++)
+            {
+                potentialXCoordinatesForCapturePoints.Add(x);
+            }
+
+            for (int y = 1; y < mapSize.y - 1; y++)
+            {
+                potentialYCoordinatesForCapturePoints.Add(y);
+            }
+
+            for (int manaPoint = 0; manaPoint < AMOUNT_OF_MANA_CAPTURE_POINTS; manaPoint++)
+            {
+                if (potentialXCoordinatesForCapturePoints.Count == 0 || potentialYCoordinatesForCapturePoints.Count == 0)
+                {
+                    Debug.LogError("Ran out of locations to place capture points!");
+                }
+
+                int xCoordinateIndex = Random.Range(0, potentialXCoordinatesForCapturePoints.Count);
+                int yCoordinateIndex = Random.Range(0, potentialYCoordinatesForCapturePoints.Count);
+
+                Vector2Int placeCapturePointAt = new Vector2Int(
+                    potentialXCoordinatesForCapturePoints[xCoordinateIndex],
+                    potentialYCoordinatesForCapturePoints[yCoordinateIndex]);
+
+                if (emptyTiles.Contains(placeCapturePointAt) == false)
+                {
+                    Debug.LogError("Trying to place capture point at non-empty tile!");
+                }
+
+                setTileTo(placeCapturePointAt, grassTile);
+                TileCapturePoint newCapturePoint = new ManaCapturePoint(placeCapturePointAt);
+                getTile(placeCapturePointAt).setCapturePoint(newCapturePoint); //set to mana point           
+
+                void removeCoordinatesFromList(List<int> removeFrom, int valueToRemoveAround, int size)
+                {
+                    for (int i = Math.Max(valueToRemoveAround - CAPTURE_POINT_BLOCKING_DISTANCE, 0); i < Math.Min(size, valueToRemoveAround + CAPTURE_POINT_BLOCKING_DISTANCE); i++)
+                    {
+                        removeFrom.Remove(valueToRemoveAround);
+                    }
+                }
+
+                removeCoordinatesFromList(potentialXCoordinatesForCapturePoints, placeCapturePointAt.x, mapSize.x);
+                removeCoordinatesFromList(potentialYCoordinatesForCapturePoints, placeCapturePointAt.y, mapSize.y);
+                allCapturePoints[manaPoint] = newCapturePoint;
+            }
+        }
 
         void createRivers()
         {
@@ -183,7 +252,7 @@ public class TileManager : MonoBehaviour
                 {
                     List<Vector2Int> neighbours = getNeighbouringTiles(riverTile);
                     neighbours.RemoveAll(neighbour =>
-                    neighbouringWaterTile(neighbour, neighbour.y != riverTile.y, neighbour.x != riverTile.x) || isTileOfType(neighbour, waterTile) || closerToEdge(neighbour, riverTile, spawnRiverAtEdge));
+                    neighbouringWaterTile(neighbour, neighbour.y != riverTile.y, neighbour.x != riverTile.x) || isTileOfType(neighbour, null) == false || closerToEdge(neighbour, riverTile, spawnRiverAtEdge));
 
                     if (neighbours.Count == 0)
                     {
@@ -243,11 +312,6 @@ public class TileManager : MonoBehaviour
             }
         }
 
-        void createCapturePoints()
-        {
-
-        }
-
         void fillInGrass()
         {
             while (emptyTiles.Count > 0)
@@ -257,12 +321,14 @@ public class TileManager : MonoBehaviour
             }
         }
 
+        createHomeZones();
+        createCapturePoints();
         createRivers();
         createMountains();
         fillInGrass();
         tileSetToCallback -= tileSetTo;
         UnitManager.instance.mapSet(mapSize);
-        boardDisplayManager.renderMap(allRiversCoordinates, allMountainsCoordiantes, mapSize);
+        boardDisplayManager.renderMap(allRiversCoordinates, allMountainsCoordiantes, allCapturePoints, mapSize);
     }
 
     private bool neighbouringWaterTile(Vector2Int at, bool horizontal, bool vertical)

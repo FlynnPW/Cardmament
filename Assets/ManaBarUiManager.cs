@@ -17,7 +17,6 @@ public class ManaBarUiManager : MonoBehaviour
     void Start()
     {
         playerManager = GetComponent<PlayersManager>();
-        playerManager.subscribeToHumanTurnOfPlayerCallback((player) => { nowTurnOfPlayer(player, player.getMana(), player.getMaxMana()); });
         manaBarPosition = manaBar.transform.position;
     }
 
@@ -32,6 +31,11 @@ public class ManaBarUiManager : MonoBehaviour
         }
 
         setPosition(position);
+    }
+
+    public void onGameBegan()
+    {
+        playerManager.subscribeToHumanTurnOfPlayerCallback((player) => { nowTurnOfPlayer(player, player.getMana(), player.getMaxMana()); });
     }
 
     private void setPosition(Vector2 to)
