@@ -21,7 +21,7 @@ public class UnitManager : MonoBehaviour
     public void mapSet(Vector2Int size)
     {
         unitsAtPositions = new UnitWorld[size.x, size.y];
-        createUnitAt(new Vector2Int(0, 0));
+        //createUnitAt(new Vector2Int(0, 0));
     }
 
     public List<unitMove> potentialMovePositions(Vector2Int position, int maxBy)
@@ -109,9 +109,10 @@ public class UnitManager : MonoBehaviour
         return unitsAtPositions[tile.x, tile.y];
     }
 
-    public void createUnitAt(Vector2Int at)
+    public void createUnitAt(Vector2Int at, UnitWorld.Unit unit, Player allegiance)
     {
         UnitWorld newUnit = Instantiate(unitPrefab).GetComponent<UnitWorld>();
         setUnitToPosition(newUnit, at);
+        newUnit.unitCreated(unit, allegiance);
     }
 }

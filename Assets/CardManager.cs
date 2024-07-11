@@ -39,7 +39,7 @@ public class CardManager : MonoBehaviour
         }
 
         //bit weird to play from hand we get from card, maybe change this?
-        if (handOfCard.playCard(cardToPlay, at) == false)
+        if (handOfCard.playCard(cardToPlay, at, currentPlayer) == false)
         {
             return false;
         }

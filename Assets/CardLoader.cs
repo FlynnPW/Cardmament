@@ -1,7 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using UnityEngine;
+using Mono.Data.Sqlite;
+using Unity.VisualScripting;
+using System;
 
 public class CardLoader : MonoBehaviour
 {
@@ -10,16 +14,19 @@ public class CardLoader : MonoBehaviour
     [SerializeField]
     private Sprite[] imagesToLoad;
     private Dictionary<string, Sprite> images;
+    const string databaseName = "URI=file:Cards.db";
     const string cardFileFormat = ".txt";
-    const string cardFileIdAttribute = "id";
-    const string cardFileNameAttribute = "name";
-    const string cardFileDescriptionAttribute = "description";
+    const string cardFileIdAttribute = "cardId";
+    const string cardFileNameAttribute = "cardName";
+    const string cardFileDescriptionAttribute = "cardDescription";
     const string cardFileImageAttribute = "image";
-    const string cardFileManaCostAttribute = "mana_cost";
+    const string cardFileManaCostAttribute = "manaCost";
     const string cardFileImpactAttribute = "card_impact";
+    const string cardCountColumnName = "cardCount";
     //card move unit impact
+    const string cardMoveUnitForeignKeyColumnName = "cardMoveUnitId";
     const string cardFileImpactMoveUnit = "moveUnit";
-    const string cardFileImpactMoveDistanceAttribute = "move_distance";
+    const string cardFileImpactMoveDistanceAttribute = "moveDistance";
 
     void Start()
     {
@@ -40,104 +47,76 @@ public class CardLoader : MonoBehaviour
 
     void loadCards()
     {
-        string[] files = Directory.GetFiles(cardFolder);
-        Card[] cards = new Card[files.Length / 2]; //half to include meta files
+        Card[] cards = null;
 
-        foreach(string file in files)
+        using (var connection = new SqliteConnection(databaseName))
         {
-            if (Path.GetExtension(file) == cardFileFormat)
+            connection.Open();
+
+            int getCountOfTable(string table)
             {
-                TextFileAsset cardTextFile = new TextFileAsset(File.ReadAllLines(file));
-                string idString = cardTextFile.getAttribute(cardFileIdAttribute);
-                int id;
+                var countCommand = connection.CreateCommand();
+                countCommand.CommandText = "SELECT COUNT(*) AS " + cardCountColumnName + " FROM " + table;
 
-                if (int.TryParse(idString, out id) == false)
+                IDataReader countReader = countCommand.ExecuteReader();
+
+                countReader.Read();
+                int cardCount = int.Parse(countReader[cardCountColumnName].ToString());
+                countReader.Close();
+                return cardCount;
+            }
+
+            int cardCount = getCountOfTable("cards");
+            print(cardCount);
+            cards = new Card[cardCount];
+
+            void populateCardArray()
+            {
+                var cardCommand = connection.CreateCommand();
+                cardCommand.CommandText = "SELECT * FROM cards JOIN cardMainAttributes ON cards.cardMainAttributesId == cardMainAttributes.cardAttributesId LEFT JOIN moveUnitCards ON cards.cardMoveUnitId == moveUnitCards.cardImpactId";
+                IDataReader reader = cardCommand.ExecuteReader();
+
+                while (reader.Read())
                 {
-                    Debug.LogError(idString + " is not a valid value for " + cardFileIdAttribute + " should be of type int");
-                }
+                    int id = reader.GetInt16(0);
+                    string name = reader[cardFileNameAttribute].ToString();
+                    string description = reader[cardFileDescriptionAttribute].ToString();
+                    string imageString = reader[cardFileImageAttribute].ToString();
+                    Sprite image = null;
 
-                string name = cardTextFile.getAttribute(cardFileNameAttribute);
-                string description = cardTextFile.getAttribute(cardFileDescriptionAttribute);
-                string imageString = cardTextFile.getAttribute(cardFileImageAttribute);
-                Sprite image = null;
+                    if (reader[cardFileImageAttribute].GetType() == typeof(DBNull))
+                    {
+                        Debug.Log("Card " + name + " has image set to null.");
+                    }
+                    else if (images.ContainsKey(imageString) == false)
+                    {
+                        Debug.LogError(imageString + " is not a image");   
+                    }
+                    else
+                    {
+                        image = images[imageString];
+                    }
 
-                if (images.ContainsKey(imageString) == false)
-                {
-                    Debug.LogError(imageString + " is not a image");
-                }
-                else
-                {
-                    image = images[imageString];
-                }
+                    int manaCost = reader.GetInt16(7);
 
-                string cardManaCostString = cardTextFile.getAttribute(cardFileManaCostAttribute);
-                int cardManaCost;
+                    CardImpact cardImpact = null;
 
-                if (int.TryParse(cardManaCostString, out cardManaCost) == false)
-                {
-                    Debug.LogError(cardManaCost + " is not a valid value for " + cardFileManaCostAttribute + " should be of type int");
-                }
-
-                string cardImpactString = cardTextFile.getAttribute(cardFileImpactAttribute);
-                CardImpact cardImpact = null;
-
-                switch (cardImpactString)
-                {
-                    case cardFileImpactMoveUnit:
-                        string moveDistanceString = cardTextFile.getAttribute(cardFileImpactMoveDistanceAttribute);
-                        int moveDistance;
-
-                        if (int.TryParse(moveDistanceString, out moveDistance) == false)
-                        {
-                            Debug.LogError(moveDistanceString + " is not a valid value for " + cardFileImpactMoveDistanceAttribute + " should be of type int");
-                            break;
-                        }
-
+                    if (reader[cardMoveUnitForeignKeyColumnName].GetType() == typeof(DBNull))
+                    {
+                        int moveDistance = reader.GetInt16(9);
                         cardImpact = new CardMoveUnitImpact(moveDistance);
-                        break;
-                    default:
-                        Debug.LogError(cardImpactString + " is not a valid type of card impact");
-                        break;
+                    }
+
+                    //Change database to start from zero?
+                    cards[id - 1] = new Card(name, description, image, cardImpact, manaCost);
                 }
 
-                Card card = new Card(name, description, image, cardImpact, cardManaCost);
-                cards[id] = card;
-            }
-        }
-
-        cardManager.recieveCards(cards);
-    }
-
-    class TextFileAsset
-    {
-        private Dictionary<string, string> attributes;
-
-        public TextFileAsset(string[] lines)
-        {
-            attributes = new Dictionary<string, string>();
-            loadAttributes(lines);
-        }
-
-        private void loadAttributes(string[] lines)
-        {
-            foreach (string line in lines)
-            {
-                string[] splitLine = line.Split('=');
-                string attribute = splitLine[0];
-                string value = splitLine[1];
-
-                attributes.Add(attribute, value);
-            }
-        }
-
-        public string getAttribute(string attribute)
-        {
-            if (attributes.ContainsKey(attribute) == false)
-            {
-                return "";
+                reader.Close();
             }
 
-            return attributes[attribute];
+            populateCardArray();
+            connection.Close();
+            cardManager.recieveCards(cards);
         }
     }
 }

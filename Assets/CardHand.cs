@@ -58,7 +58,7 @@ public class CardHand
         }  
     }
 
-    public bool playCard(CardInHand toPlay, Vector2Int position)
+    public bool playCard(CardInHand toPlay, Vector2Int position, Player playedBy)
     {
         if (cardsInHand.Contains(toPlay) == false)
         {
@@ -66,7 +66,7 @@ public class CardHand
             return false;
         }
 
-        if (toPlay.cardPlayed(position) == false)
+        if (toPlay.cardPlayed(position, playedBy) == false)
         {
             return false;
         }

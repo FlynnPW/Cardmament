@@ -4,5 +4,5 @@ using UnityEngine;
 
 public interface CardImpact
 {
-    public bool attemptToPlay(Vector2Int atTile);
+    public bool attemptToPlay(Vector2Int atTile, Player playedBy);
 }

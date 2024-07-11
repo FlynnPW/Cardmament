@@ -29,9 +29,9 @@ public class CardInHand
         return hand;
     }
 
-    public bool cardPlayed(Vector2Int at)
+    public bool cardPlayed(Vector2Int at, Player playedBy)
     {
-        return ourCard.attemptToPlayCard(at);
+        return ourCard.attemptToPlayCard(at, playedBy);
     }
 
     public int getHandPosition()

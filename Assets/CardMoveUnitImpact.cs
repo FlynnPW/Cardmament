@@ -11,7 +11,7 @@ public class CardMoveUnitImpact : CardImpact
         moveDistance = moves;
     }
 
-    bool CardImpact.attemptToPlay(Vector2Int atTile)
+    bool CardImpact.attemptToPlay(Vector2Int atTile, Player playedBy)
     {
         UnitWorld unit = UnitManager.instance.getUnitAtTile(atTile);
 

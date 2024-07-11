@@ -19,9 +19,9 @@ public class Card
         this.manaCost = manaCost;
     }
 
-    public bool attemptToPlayCard(Vector2Int at)
+    public bool attemptToPlayCard(Vector2Int at, Player playedBy)
     {
-        return cardImpact.attemptToPlay(at);
+        return cardImpact.attemptToPlay(at, playedBy);
     }
 
     public string getName()
