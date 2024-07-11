@@ -27,6 +27,8 @@ public class CardLoader : MonoBehaviour
     const string cardMoveUnitForeignKeyColumnName = "cardMoveUnitId";
     const string cardFileImpactMoveUnit = "moveUnit";
     const string cardFileImpactMoveDistanceAttribute = "moveDistance";
+    //card create unit impact
+    const string cardCreateUnitForeignKeyColumnName = "cardCreateUnitId";
 
     void Start()
     {
@@ -73,7 +75,7 @@ public class CardLoader : MonoBehaviour
             void populateCardArray()
             {
                 var cardCommand = connection.CreateCommand();
-                cardCommand.CommandText = "SELECT * FROM cards JOIN cardMainAttributes ON cards.cardMainAttributesId == cardMainAttributes.cardAttributesId LEFT JOIN moveUnitCards ON cards.cardMoveUnitId == moveUnitCards.cardImpactId";
+                cardCommand.CommandText = "SELECT * FROM cards JOIN cardMainAttributes ON cards.cardMainAttributesId == cardMainAttributes.cardAttributesId LEFT JOIN moveUnitCards ON cards.cardMoveUnitId == moveUnitCards.cardImpactId LEFT JOIN createUnitCards ON cards.cardCreateUnitId == createUnitCards.CardImpactId";
                 IDataReader reader = cardCommand.ExecuteReader();
 
                 while (reader.Read())
@@ -97,14 +99,21 @@ public class CardLoader : MonoBehaviour
                         image = images[imageString];
                     }
 
-                    int manaCost = reader.GetInt16(7);
+                    int manaCost = reader.GetInt16(8);
 
                     CardImpact cardImpact = null;
 
-                    if (reader[cardMoveUnitForeignKeyColumnName].GetType() == typeof(DBNull))
+                    if (reader[cardMoveUnitForeignKeyColumnName].GetType() != typeof(DBNull))
                     {
-                        int moveDistance = reader.GetInt16(9);
+                        int moveDistance = reader.GetInt16(10);
                         cardImpact = new CardMoveUnitImpact(moveDistance);
+                    }
+                    if (reader[cardCreateUnitForeignKeyColumnName].GetType() != typeof(DBNull))
+                    {
+                        int health = reader.GetInt16(12);
+                        int attack = reader.GetInt16(13);
+                        UnitWorld.Unit unitCardCreates = new UnitWorld.Unit(health, attack);
+                        cardImpact = new CardCreateUnitImpact(unitCardCreates);
                     }
 
                     //Change database to start from zero?

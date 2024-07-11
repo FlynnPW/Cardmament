@@ -253,6 +253,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   imagesToLoad:
   - {fileID: 21300000, guid: f7f263557a7e155448e9a4820153f8b9, type: 3}
+  - {fileID: 21300000, guid: e53b6e7e3bf302b47be1e67c63113e30, type: 3}
 --- !u!114 &36587303
 MonoBehaviour:
   m_ObjectHideFlags: 0

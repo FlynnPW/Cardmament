@@ -13,6 +13,12 @@ public class UnitWorld : MonoBehaviour
     public struct Unit {
         public int health;
         public int attack;
+
+        public Unit(int health, int attack)
+        {
+            this.health = health;
+            this.attack = attack;
+        }
     }
 
     public void unitCreated(Unit attributes, Player allegiance)
