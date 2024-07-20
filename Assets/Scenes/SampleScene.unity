@@ -143,6 +143,7 @@ GameObject:
   - component: {fileID: 36587305}
   - component: {fileID: 36587306}
   - component: {fileID: 36587307}
+  - component: {fileID: 36587308}
   m_Layer: 0
   m_Name: Gamemanager
   m_TagString: Untagged
@@ -324,6 +325,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 003ea88d6ae360d449c385201a882f52, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &36587308
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 36587295}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33698a53d561a53428f65277edb2c89f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  battleIconPrefab: {fileID: 6070944594695606040, guid: d7b584cc4974de24298da3d442888fe4, type: 3}
+  battleResultPrefab: {fileID: 585737725062528353, guid: 10a986adde19be743b903e4a10f3ef54, type: 3}
+  worldSpaceCanvas: {fileID: 954015312}
 --- !u!1 &474911558
 GameObject:
   m_ObjectHideFlags: 0
@@ -1198,7 +1214,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.3018868, g: 0.3018868, b: 0.3018868, a: 0.5882353}
+  m_Color: {r: 0.105882354, g: 0.105882354, b: 0.105882354, a: 0.5882353}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1362,7 +1378,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.3019608, g: 0.3019608, b: 0.3019608, a: 0.5882353}
+  m_Color: {r: 0.105882354, g: 0.105882354, b: 0.105882354, a: 0.5882353}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

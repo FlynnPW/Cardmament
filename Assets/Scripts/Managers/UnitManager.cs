@@ -1,11 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Xml.Schema;
+using Unity.VisualScripting;
 using UnityEngine;
 using static UnitManager;
 
 public class UnitManager : MonoBehaviour
 {
     public static UnitManager instance { get; private set; }
+    public delegate void battlesHappened(List<battleResult> battleResults);
+    private battlesHappened battlesHappenedCallback;
     public enum direction { down, left, right, up }
     private UnitWorld[,] unitsAtPositions;
     private TileManager tileManager;
@@ -16,6 +20,11 @@ public class UnitManager : MonoBehaviour
     {
         instance = GetComponent<UnitManager>();
         tileManager = GetComponent<TileManager>();
+    }
+
+    public void subscribeToBattlesHappenedCallback(battlesHappened subscribe)
+    {
+        battlesHappenedCallback += subscribe;
     }
 
     public void mapSet(Vector2Int size)
@@ -102,6 +111,80 @@ public class UnitManager : MonoBehaviour
         //inform tile
         TileOnBoard tileAt = tileManager.getTile(nowAt);
         tileAt.unitSteppedOn(unit);
+    }
+
+    public struct battle
+    {
+        public Vector2Int offensiveUnitPosition;
+        public Vector2Int defensiveUnitPosition;
+
+        public battle(Vector2Int offensiveUnitPosition, Vector2Int defensiveUnitPosition)
+        {
+            this.offensiveUnitPosition = offensiveUnitPosition;
+            this.defensiveUnitPosition = defensiveUnitPosition;
+        }
+    }
+
+    public List<battle> getBattlesOnTile(Vector2Int position, UnitWorld unit)
+    {
+        List<battle> potentialBattles = new List<battle>();
+        List<Vector2Int> potentialBattleTiles = tileManager.getNeighbouringTiles(position);
+
+        foreach (Vector2Int potentialBattleTile in potentialBattleTiles)
+        {
+            UnitWorld unitToPotentiallyAttack = getUnitAtTile(potentialBattleTile);
+
+            if (unitToPotentiallyAttack == null || unitToPotentiallyAttack.getAllegiance() == unit.getAllegiance())
+            {
+                continue;
+            }
+
+            potentialBattles.Add(new battle(position, potentialBattleTile));
+        }
+
+        return potentialBattles;
+    } 
+
+    public struct battleResult
+    {
+        public UnitWorld attacker;
+        public UnitWorld defender;
+        public int diceRoll;
+        public int attack;
+        public int totalAttack;
+
+        public battleResult(UnitWorld attacker, UnitWorld defender)
+        {
+            this.attacker = attacker;
+            this.defender = defender;
+            diceRoll = Random.Range(1, 7);
+            UnitWorld.Unit attackerAttributes = attacker.getUnitAttributes();
+            UnitWorld.Unit defenderAttributes = defender.getUnitAttributes();
+            attack = attackerAttributes.attack;
+            totalAttack = attack + diceRoll;
+        }
+
+        public void executeResult()
+        {
+            
+            defender.dealDamage(totalAttack);
+            print("Attack: " + attack + " Dice roll " + diceRoll);
+        }
+    }
+
+    public void attackNeighbouringUnits(UnitWorld attacker)
+    {
+        List<battle> battles = getBattlesOnTile(attacker.getGridPosition(), attacker);
+        List<battleResult> battleResults = new List<battleResult>();
+
+        foreach (battle battle in battles)
+        {
+            Vector2Int defenderPosition = battle.defensiveUnitPosition;
+            UnitWorld defendingUnit = unitsAtPositions[defenderPosition.x, defenderPosition.y];
+            battleResults.Add(new battleResult(attacker, defendingUnit));
+        }
+
+        battlesHappenedCallback(battleResults);
     }
 
     public UnitWorld getUnitAtTile(Vector2Int tile)

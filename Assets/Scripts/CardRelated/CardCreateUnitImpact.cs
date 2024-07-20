@@ -4,7 +4,8 @@ using UnityEngine;
 
 public class CardCreateUnitImpact : CardImpact
 {
-    UnitWorld.Unit unit;
+    private UnitWorld.Unit unit;
+    private bool restrictedToHomeZone;
 
     public CardCreateUnitImpact(UnitWorld.Unit unit)
     {
@@ -15,7 +16,7 @@ public class CardCreateUnitImpact : CardImpact
     {
         UnitWorld unitAtTile = UnitManager.instance.getUnitAtTile(atTile);
 
-        if (unitAtTile != null)
+        if (unitAtTile != null || TileManager.instance.isAvaliableTileToPlace(atTile, playedBy, restrictedToHomeZone == false))
         {
             return false;
         }

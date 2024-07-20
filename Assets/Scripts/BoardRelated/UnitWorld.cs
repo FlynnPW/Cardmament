@@ -50,6 +50,11 @@ public class UnitWorld : MonoBehaviour
         return allegiance;
     }
 
+    public Unit getUnitAttributes()
+    {
+        return unitAttributes;
+    }
+
     public void dealDamage(int damage)
     {
         health -= damage;

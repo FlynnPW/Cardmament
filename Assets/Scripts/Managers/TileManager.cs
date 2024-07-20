@@ -6,6 +6,7 @@ using Random = UnityEngine.Random;
 
 public class TileManager : MonoBehaviour
 {
+    public static TileManager instance { get; private set; }
     private Vector2Int mapSize;
     private TileOnBoard[,] mapTiles;
     private Player[,] playerHomeZone;
@@ -36,6 +37,7 @@ public class TileManager : MonoBehaviour
 
     private void Start()
     {
+        instance = GetComponent<TileManager>();
         boardDisplayManager = GetComponent<BoardDisplayManager>();
         playersManagers = GetComponent<PlayersManager>();
     }
@@ -331,6 +333,11 @@ public class TileManager : MonoBehaviour
         boardDisplayManager.renderMap(allRiversCoordinates, allMountainsCoordiantes, allCapturePoints, mapSize);
     }
 
+    public bool isAvaliableTileToPlace(Vector2Int at, Player toCheck, bool emptyValid)
+    {
+        return (playerHomeZone[at.x, at.y] == toCheck) || (playerHomeZone[at.x, at.y] == null && emptyValid);
+    }
+
     private bool neighbouringWaterTile(Vector2Int at, bool horizontal, bool vertical)
     {
         if (horizontal) //are we above or below?
@@ -352,7 +359,7 @@ public class TileManager : MonoBehaviour
         if (tileSetToCallback != null) { tileSetToCallback(positionToSet, to); }
     }
 
-    private List<Vector2Int> getNeighbouringTiles(Vector2Int from)
+    public List<Vector2Int> getNeighbouringTiles(Vector2Int from)
     {
         List<Vector2Int> neighboursToReturn = new List<Vector2Int>();
 

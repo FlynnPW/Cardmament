@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="uuid-b1ceea2b-de88-4d20-ba2c-b699bd2b1feb" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5000 5000">
+  <defs>
+    <style>
+      .uuid-606aea18-28f6-49ad-87b0-49ebeab85db0 {
+        fill: #ed1c24;
+      }
+
+      .uuid-606aea18-28f6-49ad-87b0-49ebeab85db0, .uuid-3edc0ff4-c2b4-4ac4-adb4-8dbd1c2f5ff6 {
+        stroke-width: 0px;
+      }
+
+      .uuid-3edc0ff4-c2b4-4ac4-adb4-8dbd1c2f5ff6 {
+        fill: #fff;
+      }
+    </style>
+  </defs>
+  <rect class="uuid-3edc0ff4-c2b4-4ac4-adb4-8dbd1c2f5ff6" width="5000" height="5000"/>
+  <path class="uuid-606aea18-28f6-49ad-87b0-49ebeab85db0" d="m2252.64,3872.28l92.42-92.42-324.91-527.9,1906.63-1719.53,229.01-688.22-688.22,229.01-1719.53,1906.63-527.9-324.91-92.42,92.42,436.41,436.41-472.44,523.84c-64.84-6.58-132,14.96-181.68,64.64-87.74,87.74-87.74,229.99,0,317.73,87.74,87.74,229.99,87.74,317.73,0,49.68-49.68,71.22-116.84,64.64-181.68l523.84-472.44,436.41,436.41Z"/>
+</svg>
