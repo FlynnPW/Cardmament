@@ -1,7 +1,0 @@
-id=0
-name=Marching Orders
-description=An army marches on its stomach.
-image=MarchingOrders
-card_impact=moveUnit
-move_distance=2
-mana_cost=20
