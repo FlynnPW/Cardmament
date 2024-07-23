@@ -67,6 +67,8 @@ public class UnitWorld : MonoBehaviour
 
     private void die()
     {
-
+        UnitManager.instance.unitHasDied(this);
+        //for now just have this
+        GetComponent<SpriteRenderer>().color = Color.red;
     }
 }

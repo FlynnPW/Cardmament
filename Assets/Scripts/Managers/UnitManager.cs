@@ -113,6 +113,13 @@ public class UnitManager : MonoBehaviour
         tileAt.unitSteppedOn(unit);
     }
 
+    public void unitHasDied(UnitWorld unit)
+    {
+        Vector2Int positionOfUnit = unit.getGridPosition();
+        unitsAtPositions[positionOfUnit.x, positionOfUnit.y] = null;
+        tileManager.unitLeftTile(positionOfUnit);
+    }
+
     public struct battle
     {
         public Vector2Int offensiveUnitPosition;
@@ -165,8 +172,7 @@ public class UnitManager : MonoBehaviour
         }
 
         public void executeResult()
-        {
-            
+        {          
             defender.dealDamage(totalAttack);
             print("Attack: " + attack + " Dice roll " + diceRoll);
         }
@@ -181,7 +187,9 @@ public class UnitManager : MonoBehaviour
         {
             Vector2Int defenderPosition = battle.defensiveUnitPosition;
             UnitWorld defendingUnit = unitsAtPositions[defenderPosition.x, defenderPosition.y];
-            battleResults.Add(new battleResult(attacker, defendingUnit));
+            battleResult result = new battleResult(attacker, defendingUnit);
+            battleResults.Add(result);
+            result.executeResult();
         }
 
         battlesHappenedCallback(battleResults);
