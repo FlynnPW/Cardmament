@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Xml.Schema;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -96,12 +97,35 @@ public class UnitManager : MonoBehaviour
 
     private void setUnitToPosition(UnitWorld unit, Vector2Int nowAt)
     {
+        //kind weird but whatever
+        void exertInfluenceFrom(Vector2Int tilePos, bool noLonger)
+        {
+            List<Vector2Int> tilesNoLongerInfluencing = new List<Vector2Int>();
+            tilesNoLongerInfluencing.Add(tilePos);
+            tilesNoLongerInfluencing.AddRange(tileManager.getNeighbouringTiles(tilePos));
+
+            foreach (Vector2Int changeInfluence in tileManager.getNeighbouringTiles(tilePos))
+            {
+                TileOnBoard tile = tileManager.getTile(changeInfluence);
+                
+                if (noLonger)
+                {
+                    tile.tileNoLongerInInfluenceOf(unit);
+                }
+                else
+                {
+                    tile.tileInInfluenceOf(unit);
+                }         
+            }
+        }
+
         Vector2Int oldPosition = unit.getGridPosition();
 
         if (unit.isUnitPoisitionSet())
         {
             unitsAtPositions[oldPosition.x, oldPosition.y] = null;
             tileManager.unitLeftTile(oldPosition);
+            exertInfluenceFrom(oldPosition, true);
         }
         
         unitsAtPositions[nowAt.x, nowAt.y] = unit;
@@ -111,6 +135,14 @@ public class UnitManager : MonoBehaviour
         //inform tile
         TileOnBoard tileAt = tileManager.getTile(nowAt);
         tileAt.unitSteppedOn(unit);
+        exertInfluenceFrom(nowAt, false);
+    }
+
+    private void unitAffectTiles(UnitWorld unit, Vector2Int at)
+    {
+        List<Vector2Int> neigbours = tileManager.getNeighbouringTiles(at);
+
+        //neigbours.RemoveAll(neighbour => tileManager.getNeighbouringTiles(neigbour));
     }
 
     public void unitHasDied(UnitWorld unit)

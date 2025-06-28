@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -18,7 +19,10 @@ public class BoardDisplayManager : MonoBehaviour
     [SerializeField]
     private Material groundMaterial;
     [SerializeField]
+    private Material territoryMaterial;
+    [SerializeField]
     private Camera mainCamera;
+    private Dictionary<Player, territoryMesh> playerTerritoryMeshes;
     const float RIVER_MINIMUM_WIDTH = 0.2f; //from the middle so actual width will be * 2
     const float RIVER_MAXIMUM_WIDTH = 0.4f;
     const int AMOUNT_OF_MOUNTAINS_PER_TILE_MAX = 3;
@@ -30,7 +34,52 @@ public class BoardDisplayManager : MonoBehaviour
     const int RIVER_LAYER = 1;
     const int MOUNTAIN_LAYER = 2;
 
-    public void renderMap(List<Vector2Int>[] riversCoordinates, List<Vector2Int>[] mountainCoordinates, TileCapturePoint[] capturePoints, Vector2Int mapSize)
+    struct territoryMesh
+    {
+        public MeshFilter meshFilter;
+        public int[,] indexForTile;
+        public bool modifiedThisFrame;
+        public List<Vector2Int> removeTerritory;
+        public List<Vector2Int> addTerritory;
+
+        public territoryMesh(MeshFilter mesh)
+        {
+            this.meshFilter = mesh;
+            Vector2Int mapSize = TileManager.instance.getMapSize();
+            indexForTile = new int[mapSize.x, mapSize.y];
+            modifiedThisFrame = false;
+            removeTerritory = new List<Vector2Int>();
+            addTerritory = new List<Vector2Int>();
+        }
+    }
+
+    private void Start()
+    {
+        playerTerritoryMeshes = new Dictionary<Player, territoryMesh>();
+    }
+
+    private void Update()
+    {
+        foreach (territoryMesh territory in playerTerritoryMeshes.Values)
+        {
+            Vector3[] vertices = new Vector3[territory.meshFilter.mesh.vertexCount];
+            int[] triangles = new int[territory.meshFilter.mesh.triangles.Length];
+            Vector2[] uv = new Vector2[territory.meshFilter.mesh.uv.Length];
+
+            if (territory.modifiedThisFrame == false)
+            {
+                return;
+            }
+            
+            foreach (Vector2Int remove in territory.removeTerritory)
+            {
+                int index = territory.indexForTile[remove.x, remove.y];
+               // vertices[index * 4] = ;
+            }
+        }
+    }
+
+    public void renderMap(List<Vector2Int>[] riversCoordinates, List<Vector2Int>[] mountainCoordinates, TileCapturePoint[] capturePoints, Vector2Int mapSize, Dictionary<Tile, List<Vector2Int>> mapTiles)
     {
         foreach (List<Vector2Int> river in riversCoordinates)
         {
@@ -42,7 +91,7 @@ public class BoardDisplayManager : MonoBehaviour
             createMountain(mountain);
         }
 
-        createGround(mapSize);
+        createGround(mapSize, mapTiles);
 
         foreach (TileCapturePoint capturePoint in capturePoints)
         {
@@ -52,45 +101,70 @@ public class BoardDisplayManager : MonoBehaviour
         mainCamera.transform.position = new Vector3((mapSize.x - 0.5f) / 2, (mapSize.y - 0.5f) / 2, -10);
     }
 
+    public void playerAddedToDisplay(Player player, Color colourOfPlayer)
+    {
+        MeshFilter territoryMeshFilter = Instantiate(meshPrefab, boardParent.transform).GetComponent<MeshFilter>();
+        territoryMeshFilter.GetComponent<MeshRenderer>().material = territoryMaterial;
+        Mesh playerTerritoryMesh = new Mesh();
+        territoryMeshFilter.mesh = playerTerritoryMesh;
+        territoryMesh territoryMesh = new territoryMesh(territoryMeshFilter);
+        playerTerritoryMeshes.Add(player, territoryMesh);
+    }
+
     void createManaCapturePoint(TileCapturePoint capturePoint)
     {
         switch (capturePoint.getCapturePointType())
         {
             case TileCapturePoint.capturePointType.ManaCapturePoint:
-                CapturePointWorld capturePointWorld = Instantiate(manaCapturePointPrefab, boardParent.transform).GetComponent<CapturePointWorld>();
+                CapturePointDisplay capturePointWorld = Instantiate(manaCapturePointPrefab, boardParent.transform).GetComponent<CapturePointDisplay>();
                 capturePointWorld.transform.position = (Vector2)capturePoint.getPosition();
                 break;
         }
     }
 
-    void createGround(Vector2Int mapSize)
+    void createGround(Vector2Int mapSize, Dictionary<Tile, List<Vector2Int>> tiles)
     {
-        MeshFilter groundToApplyMesh = Instantiate(meshPrefab, boardParent.transform).GetComponent<MeshFilter>();
-        groundToApplyMesh.GetComponent<MeshRenderer>().material = groundMaterial;
-        groundToApplyMesh.GetComponent<SortingGroup>().sortingOrder = GROUND_LAYER;
+        //we have one extra row and colum of vertices
+        //0,1 -- 1,1
+        // |  0,0 |
+        //0,0 -- 1,0
+        Vector2[,] globalVertices = new Vector2[mapSize.x + 1, mapSize.y + 1];
 
-        Mesh Mesh = new Mesh();
-        int quads = mapSize.x * mapSize.y;
-        Vector3[] vertices = new Vector3[4 * quads];
-        Vector2[] uv = new Vector2[4 * quads];
-        int[] triangles = new int[6 * quads];
-
-        for (int x = 0; x < mapSize.x; x++)
+        for (int x = 0; x < mapSize.x + 1; x++)
         {
-            for (int y = 0; y < mapSize.y; y++)
+            for (int y = 0; y < mapSize.y + 1; y++)
             {
-                int QuadOn = y * mapSize.x + x;
-                Vector2 quadPosition = new Vector2(x, y);
+                globalVertices[x, y] = new Vector2(x - 0.5f, y - 0.5f);
+            }
+        }
+
+        foreach (Tile createMeshFor in tiles.Keys)
+        {
+            MeshFilter groundToApplyMesh = Instantiate(meshPrefab, boardParent.transform).GetComponent<MeshFilter>();
+            groundToApplyMesh.GetComponent<MeshRenderer>().material = createMeshFor.getMaterial();
+            groundToApplyMesh.GetComponent<SortingGroup>().sortingOrder = GROUND_LAYER;
+
+            List<Vector2Int> tileCoordinates = tiles[createMeshFor];
+            Mesh Mesh = new Mesh();
+            int quads = tileCoordinates.Count;
+            Vector3[] vertices = new Vector3[4 * quads];
+            Vector2[] uv = new Vector2[4 * quads];
+            int[] triangles = new int[6 * quads];
+
+            for(int i = 0; i < tileCoordinates.Count; i++)
+            {
+                int QuadOn = i;
+                Vector2Int tileCoordinate = tileCoordinates[QuadOn];
 
                 int bottomLeft = QuadOn * 4;
                 int topLeft = QuadOn * 4 + 1;
                 int topRight = QuadOn * 4 + 2;
                 int bottomRight = QuadOn * 4 + 3;
 
-                vertices[bottomLeft] = quadPosition + new Vector2(-0.5f, -0.5f); 
-                vertices[topLeft] = quadPosition + new Vector2(-0.5f, 0.5f);
-                vertices[topRight] = quadPosition + new Vector2(0.5f, 0.5f);
-                vertices[bottomRight] = quadPosition + new Vector2(0.5f, -0.5f);
+                vertices[bottomLeft] = globalVertices[tileCoordinate.x, tileCoordinate.y];
+                vertices[topLeft] = globalVertices[tileCoordinate.x, tileCoordinate.y + 1];
+                vertices[topRight] = globalVertices[tileCoordinate.x + 1, tileCoordinate.y + 1];
+                vertices[bottomRight] = globalVertices[tileCoordinate.x + 1, tileCoordinate.y];
 
                 uv[QuadOn * 4] = new Vector3(0, 0);
                 uv[QuadOn * 4 + 1] = new Vector3(0, 1);
@@ -104,13 +178,13 @@ public class BoardDisplayManager : MonoBehaviour
                 triangles[QuadOn * 6 + 4] = topRight;
                 triangles[QuadOn * 6 + 5] = bottomRight;
             }
+
+            Mesh.vertices = vertices;
+            Mesh.uv = uv;
+            Mesh.triangles = triangles;
+
+            groundToApplyMesh.mesh = Mesh;
         }
-
-        Mesh.vertices = vertices;
-        Mesh.uv = uv;
-        Mesh.triangles = triangles;
-
-        groundToApplyMesh.mesh = Mesh;
     }
 
     void createRiver(List<Vector2Int> riverCoordinates)
@@ -259,6 +333,20 @@ public class BoardDisplayManager : MonoBehaviour
         Mesh.triangles = triangles;
 
         mountainToApplyMesh.mesh = Mesh;
+    }
+
+    public void territoryExpanded(Player whoExpanded, Vector2Int where)
+    {
+        territoryMesh expandMesh = playerTerritoryMeshes[whoExpanded];
+        expandMesh.addTerritory.Add(where);
+        expandMesh.modifiedThisFrame = true;
+    }
+
+    public void territoryShrunk(Player whoShrunk, Vector2Int where)
+    {
+        territoryMesh expandMesh = playerTerritoryMeshes[whoShrunk];
+        expandMesh.removeTerritory.Add(where);
+        expandMesh.modifiedThisFrame = true;
     }
 
     struct tileRiverVertices

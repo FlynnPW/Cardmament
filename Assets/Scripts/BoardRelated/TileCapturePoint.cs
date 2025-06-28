@@ -2,16 +2,21 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public abstract class TileCapturePoint
+public abstract class TileCapturePoint : BoardPiece
 {
     protected Vector2Int position;
     protected Player playerControlling;
-    protected CapturePointWorld ourCapturePointWorld;
+    protected CapturePointDisplay ourCapturePointWorld;
     public enum capturePointType { ManaCapturePoint }
 
     public TileCapturePoint(Vector2Int positionOfCapturePoint)
     {
         this.position = positionOfCapturePoint;
+    }
+
+    Player BoardPiece.getPlayerOwner()
+    {
+        return playerControlling;
     }
 
     public void unitAtPoint(UnitWorld unit)
@@ -31,7 +36,7 @@ public abstract class TileCapturePoint
         playerControlling = capturedBy;
     }
 
-    private void setWorldRepresentation(CapturePointWorld to)
+    private void setWorldRepresentation(CapturePointDisplay to)
     {
         ourCapturePointWorld = to;
     }

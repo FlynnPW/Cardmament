@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CapturePointWorld : MonoBehaviour
+public class CapturePointDisplay : MonoBehaviour
 {
     // Start is called before the first frame update
     void Start()

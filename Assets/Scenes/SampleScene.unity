@@ -206,12 +206,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 260f00e859670b7408c536129f330009, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mountainTile:
-    passable: 0
-  waterTile:
-    passable: 1
-  grassTile:
-    passable: 1
+  tiles:
+  - material: {fileID: 2100000, guid: 2646bad3608452e47be28fb411a6d930, type: 2}
+  - material: {fileID: 2100000, guid: c731110157b7a4e4a8d3f0b9ed008c40, type: 2}
+  river:
+    featurePassable: 1
+  mountain:
+    featurePassable: 0
   tilePrefab: {fileID: 4818688971503473197, guid: 7b272b5a4a63dd14fb0bd330f3d986e0, type: 3}
 --- !u!114 &36587300
 MonoBehaviour:

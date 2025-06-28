@@ -17,10 +17,12 @@ public abstract class Player
     const int maxMana = 200;
     private int manaIncome = baseManaIncome;
     private int mana = baseMana;
+    private Color colour;
 
-    public Player(Card[] deck)
+    public Player(Card[] deck, Color colour)
     {
         ourHand = new CardHand(deck);
+        this.colour = colour;
     }
 
     public CardHand getOurHand()
@@ -78,6 +80,11 @@ public abstract class Player
     public bool canPlayFromHand(CardHand hand)
     {
         return hand == ourHand;
+    }
+
+    public Color getColour()
+    {
+        return colour;
     }
 
     public abstract void takeTurnActions();

@@ -69,7 +69,6 @@ public class CardLoader : MonoBehaviour
             }
 
             int cardCount = getCountOfTable("cards");
-            print(cardCount);
             cards = new Card[cardCount];
 
             void populateCardArray()

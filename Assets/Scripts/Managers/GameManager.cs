@@ -23,7 +23,8 @@ public class GameManager : MonoBehaviour
         int seed;
         seed = Random.Range(0, MAX_SEED);
         Debug.Log("Seed is: " + seed);
-        playerManager.setupPlayers(new PlayersManager.playerType[] { PlayersManager.playerType.human, PlayersManager.playerType.human });
+        playerManager.setupPlayers(new PlayersManager.playerSetupData[] 
+        { new PlayersManager.playerSetupData(PlayersManager.playerType.human, Color.red), new PlayersManager.playerSetupData(PlayersManager.playerType.human, Color.blue)});
         tileManager.generateMap(seed);
         cardUiManager.onGameBegan();
         playerManager.onGameBegan();

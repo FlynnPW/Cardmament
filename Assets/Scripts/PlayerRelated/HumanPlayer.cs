@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class HumanPlayer : Player
 {
-    public HumanPlayer(Card[] deck) : base(deck) { }
+    public HumanPlayer(Card[] deck, Color colour) : base(deck, colour) { }
 
     public override void takeTurnActions()
     {

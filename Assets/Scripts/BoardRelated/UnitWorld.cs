@@ -2,13 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class UnitWorld : MonoBehaviour
+public class UnitWorld : MonoBehaviour, BoardPiece
 {
     private bool positionSet = false;
     private int health;
     private Unit unitAttributes;
     private Vector2Int gridPosition;
     private Player allegiance;
+    [SerializeField]
+    private Flag ourFlag;
 
     public struct Unit {
         public int health;
@@ -21,11 +23,17 @@ public class UnitWorld : MonoBehaviour
         }
     }
 
+    Player BoardPiece.getPlayerOwner()
+    {
+        return allegiance;
+    }
+
     public void unitCreated(Unit attributes, Player allegiance)
     {
         unitAttributes = attributes;
         health = attributes.health;
         this.allegiance = allegiance;
+        ourFlag.setColour(allegiance.getColour());
     }
 
     public void unitMovedTo(Vector2Int moveTo)

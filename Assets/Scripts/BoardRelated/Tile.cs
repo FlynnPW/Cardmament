@@ -7,10 +7,10 @@ using UnityEngine;
 public class Tile
 {
     [SerializeField]
-    private bool passable;
+    private Material material;
 
-    public bool isTilePassable()
+    public Material getMaterial()
     {
-        return passable;
+        return material;
     }
 }

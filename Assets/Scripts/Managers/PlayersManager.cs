@@ -11,28 +11,43 @@ public class PlayersManager : MonoBehaviour
     private Player currentPlayer = null;
     private Player[] players;
     private CardManager cardManager;
+    private BoardDisplayManager boardDisplayManager;
     public enum playerType { human, cpu }
+
+    public struct playerSetupData 
+    {
+        public playerSetupData(playerType type, Color colour)
+        {
+            this.type = type;
+            this.colour = colour;
+        }
+
+        public playerType type;
+        public Color colour;
+    }
 
     private void Start()
     {
         cardManager = GetComponent<CardManager>();
+        boardDisplayManager = GetComponent<BoardDisplayManager>();
     }
 
-    public void setupPlayers(playerType[] playersToSetup)
+    public void setupPlayers(playerSetupData[] playersToSetup)
     {
         players = new Player[playersToSetup.Length];
         
         for (int i = 0; i < players.Length; i++)
         {
-            switch (playersToSetup[i])
+            switch (playersToSetup[i].type)
             {
                 case playerType.human:
-                    players[i] = new HumanPlayer(cardManager.getDeck());
+                    players[i] = new HumanPlayer(cardManager.getDeck(), playersToSetup[i].colour);
                     break;
                 case playerType.cpu:
                     break;
             }
-            
+
+            boardDisplayManager.playerAddedToDisplay(players[i], playersToSetup[i].colour);
         }
     }
 

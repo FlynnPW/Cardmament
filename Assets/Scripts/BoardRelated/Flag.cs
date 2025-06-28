@@ -11,12 +11,13 @@ public class Flag : MonoBehaviour
     void Start()
     {
         ourLinerenderer = GetComponent<LineRenderer>();
-        ourLinerenderer.SetPosition(0, transform.position);
     }
 
     // Update is called once per frame
     void Update()
     {
+        ourLinerenderer.SetPosition(0, transform.position);
+
         for (int i = 1; i < ourLinerenderer.positionCount; i++)
         {
             float positionInSinCurve = (currentFlagFlapTime / FLAG_FLAP_TIME) + ((float)i / ourLinerenderer.positionCount);
@@ -31,5 +32,11 @@ public class Flag : MonoBehaviour
         {
             currentFlagFlapTime -= FLAG_FLAP_TIME;
         }
+    }
+
+    public void setColour(Color to)
+    {
+        GetComponent<LineRenderer>().startColor = to;
+        GetComponent<LineRenderer>().endColor = to;
     }
 }
